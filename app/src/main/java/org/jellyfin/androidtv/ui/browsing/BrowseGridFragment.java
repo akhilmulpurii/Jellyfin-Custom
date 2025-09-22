@@ -27,6 +27,7 @@ import androidx.leanback.widget.Presenter;
 import androidx.leanback.widget.Row;
 import androidx.leanback.widget.RowPresenter;
 import androidx.leanback.widget.VerticalGridPresenter;
+import androidx.leanback.widget.VerticalGridView;
 import androidx.lifecycle.Lifecycle;
 
 import org.jellyfin.androidtv.R;
@@ -77,6 +78,17 @@ import java.util.UUID;
 import kotlin.Lazy;
 import kotlinx.serialization.json.Json;
 import timber.log.Timber;
+
+class LeftAlignedVerticalGridPresenter extends VerticalGridPresenter {
+    @Override
+    protected void initializeGridViewHolder(ViewHolder vh) {
+        super.initializeGridViewHolder(vh);
+        VerticalGridView gridView = vh.getGridView();
+        ViewGroup.LayoutParams params = gridView.getLayoutParams();
+        params.width = ViewGroup.LayoutParams.MATCH_PARENT;
+        gridView.setLayoutParams(params);
+    }
+}
 
 public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
     private final static int CHUNK_SIZE_MINIMUM = 25;
@@ -157,6 +169,8 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
 
         if (mGridDirection.equals(GridDirection.VERTICAL))
             setGridPresenter(new VerticalGridPresenter());
+        else if (mGridDirection.equals(GridDirection.LIST))
+            setGridPresenter(new LeftAlignedVerticalGridPresenter());
         else
             setGridPresenter(new HorizontalGridPresenter());
 
@@ -248,8 +262,13 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
             mGridView.setPadding(titleMargin.getMarginStart(), mGridPaddingTop, clockMargin.getMarginEnd(), mGridPaddingTop); // prevent initial card cutoffs
         } else if (mGridViewHolder instanceof VerticalGridPresenter.ViewHolder) {
             mGridView = ((VerticalGridPresenter.ViewHolder) mGridViewHolder).getGridView();
-            mGridView.setGravity(Gravity.CENTER_HORIZONTAL);
-            mGridView.setPadding(mGridPaddingLeft, mGridPaddingTop, mGridPaddingLeft, mGridPaddingTop); // prevent initial card cutoffs
+            if (mGridDirection.equals(GridDirection.LIST)) {
+                mGridView.setGravity(Gravity.START);
+                mGridView.setPadding(0, mGridPaddingTop, mGridPaddingLeft, mGridPaddingTop);
+            } else {
+                mGridView.setGravity(Gravity.CENTER_HORIZONTAL);
+                mGridView.setPadding(mGridPaddingLeft, mGridPaddingTop, mGridPaddingLeft, mGridPaddingTop); // prevent initial card cutoffs
+            }
         }
         mGridView.setHorizontalSpacing(mGridItemSpacingHorizontal);
         mGridView.setVerticalSpacing(mGridItemSpacingVertical);
@@ -456,24 +475,29 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         // HINT: use uneven Rows/Cols if possible, so selected middle lines up with TV middle!
         if (mGridPresenter instanceof VerticalGridPresenter) {
             int numCols;
-            switch (posterSize) {
-                case SMALLEST:
-                    numCols = imageType.equals(ImageType.BANNER) ? 6 : imageType.equals(ImageType.THUMB) ? 11 : 15;
-                    break;
-                case SMALL:
-                    numCols = imageType.equals(ImageType.BANNER) ? 5 : imageType.equals(ImageType.THUMB) ? 9 : 13;
-                    break;
-                case MED:
-                    numCols = imageType.equals(ImageType.BANNER) ? 4 : imageType.equals(ImageType.THUMB) ? 7 : 11;
-                    break;
-                case LARGE:
-                    numCols = imageType.equals(ImageType.BANNER) ? 3 : imageType.equals(ImageType.THUMB) ? 5 : 7;
-                    break;
-                case X_LARGE:
-                    numCols = imageType.equals(ImageType.BANNER) ? 2 : imageType.equals(ImageType.THUMB) ? 3 : 5;
-                    break;
-                default:
-                    throw new IllegalStateException("Unexpected value: " + mPosterSizeSetting);
+            // List layout always uses 1 column regardless of poster size or image type
+            if (mGridDirection.equals(GridDirection.LIST)) {
+                numCols = 1;
+            } else {
+                switch (posterSize) {
+                    case SMALLEST:
+                        numCols = imageType.equals(ImageType.BANNER) ? 6 : imageType.equals(ImageType.THUMB) ? 11 : 15;
+                        break;
+                    case SMALL:
+                        numCols = imageType.equals(ImageType.BANNER) ? 5 : imageType.equals(ImageType.THUMB) ? 9 : 13;
+                        break;
+                    case MED:
+                        numCols = imageType.equals(ImageType.BANNER) ? 4 : imageType.equals(ImageType.THUMB) ? 7 : 11;
+                        break;
+                    case LARGE:
+                        numCols = imageType.equals(ImageType.BANNER) ? 3 : imageType.equals(ImageType.THUMB) ? 5 : 7;
+                        break;
+                    case X_LARGE:
+                        numCols = imageType.equals(ImageType.BANNER) ? 2 : imageType.equals(ImageType.THUMB) ? 3 : 5;
+                        break;
+                    default:
+                        throw new IllegalStateException("Unexpected value: " + mPosterSizeSetting);
+                }
             }
             ((VerticalGridPresenter) mGridPresenter).setNumberOfColumns(numCols);
         } else if (mGridPresenter instanceof HorizontalGridPresenter) {
@@ -508,6 +532,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         }
         double cardScaling = Math.max(mCardFocusScale - 1.0, 0.0);
         int cardHeightInt = 100;
+        int cardWidthInt = 100;
         int spacingHorizontalInt = 0;
         int spacingVerticalInt = 0;
         int paddingLeftInt = 0;
@@ -545,7 +570,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
             if (Math.abs(sumSize - mGridHeight) > 2) {
                 Timber.w("setAutoCardGridValues calculation delta > 2, something is off GridHeight <%s> sumSize <%s>!", mGridHeight, sumSize);
             }
-            int cardWidthInt = (int) getCardWidthBy(cardHeightInt, mImageType, mFolder);
+            cardWidthInt = (int) getCardWidthBy(cardHeightInt, mImageType, mFolder);
             paddingLeftInt = (int) Math.round((cardWidthInt * cardScaling) / 2.0);
             spacingHorizontalInt = Math.max((int) (Math.round(paddingLeftInt * CARD_SPACING_PCT)), 0); // round spacing
             if (mImageType == ImageType.BANNER) {
@@ -555,6 +580,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
             mCardsScreenEst = numRows * cardsCol;
             mCardsScreenStride = numRows;
         } else if (numCols > 0) {
+            boolean isListLayout = mGridDirection.equals(GridDirection.LIST);
             double paddingPct = cardScaling / numCols;
             double spacingPct = ((paddingPct / 2.0) * CARD_SPACING_PCT) * (numCols - 1);
             if (mImageType == ImageType.BANNER) {
@@ -565,9 +591,31 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
             double usableCardSpace = mGridWidth / (1.0 + wastedSpacePct); // decrease size
             double cardWidth = usableCardSpace / numCols;
 
-            // fix any rounding errors and make pixel perfect
-            cardHeightInt = (int) Math.round(getCardHeightBy(cardWidth, mImageType, mFolder));
-            int cardWidthInt = (int) getCardWidthBy(cardHeightInt, mImageType, mFolder);
+            if (isListLayout) {
+                // specific dimensions for List layout
+                switch (mImageType) {
+                    case POSTER:
+                        cardWidthInt = 190;
+                        cardHeightInt = (int) Math.round(getCardHeightBy(cardWidthInt, mImageType, mFolder));
+                        break;
+                    case BANNER:
+                        cardWidthInt = 90;
+                        cardHeightInt = 94;
+                        break;
+                    case THUMB:
+                        cardWidthInt = 328;
+                        cardHeightInt = 222;
+                        break;
+                    default:
+                        cardWidthInt = (int) Math.round(cardWidth);
+                        cardHeightInt = (int) Math.round(getCardHeightBy(cardWidthInt, mImageType, mFolder));
+                        break;
+                }
+            } else {
+                // fix any rounding errors and make pixel perfect
+                cardHeightInt = (int) Math.round(getCardHeightBy(cardWidth, mImageType, mFolder));
+                cardWidthInt = (int) getCardWidthBy(cardHeightInt, mImageType, mFolder);
+            }
             double cardPaddingLeftRightAdj = cardWidthInt * cardScaling;
             spacingHorizontalInt = Math.max((int) (Math.round((cardPaddingLeftRightAdj / 2.0) * CARD_SPACING_PCT)), 0); // round spacing
             if (mImageType == ImageType.BANNER) {
@@ -636,6 +684,8 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
                 setGridPresenter(new VerticalGridPresenter());
             } else if (mGridDirection.equals(GridDirection.HORIZONTAL) && (mGridPresenter == null || !(mGridPresenter instanceof HorizontalGridPresenter))) {
                 setGridPresenter(new HorizontalGridPresenter());
+            } else if (mGridDirection.equals(GridDirection.LIST) && (mGridPresenter == null || !(mGridPresenter instanceof VerticalGridPresenter))) {
+                setGridPresenter(new LeftAlignedVerticalGridPresenter());
             }
             setDefaultGridRowCols(mPosterSizeSetting, mImageType);
             setAutoCardGridValues();
@@ -664,7 +714,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
     }
 
     private void buildAdapter() {
-        mCardPresenter = new CardPresenter(false, mImageType, mCardHeight);
+        mCardPresenter = new CardPresenter(false, mImageType, mCardHeight, mGridDirection.equals(GridDirection.LIST));
         mCardPresenter.setUniformAspect(true); // make grid layouts always uniform
 
         Timber.d("buildAdapter cardHeight <%s> getCardWidthBy <%s> chunks <%s> type <%s>", mCardHeight, (int) getCardWidthBy(mCardHeight, mImageType, mFolder), mRowDef.getChunkSize(), mRowDef.getQueryType().toString());
