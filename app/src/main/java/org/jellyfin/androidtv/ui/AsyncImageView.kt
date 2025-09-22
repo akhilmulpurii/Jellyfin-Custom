@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.util.BlurHashDecoder
+import org.jellyfin.androidtv.util.DeviceMemoryUtils
 import org.jellyfin.androidtv.util.applyNetworkOptimizations
 import org.jellyfin.androidtv.util.applyPerformanceMonitoring
 import org.jellyfin.androidtv.util.applyQualityOptimizations
@@ -173,14 +174,17 @@ class AsyncImageView @JvmOverloads constructor(
 		loadWithScrollAware {
 			lifeCycleOwner?.lifecycleScope?.launch(Dispatchers.IO) {
 				var placeholderOrBlurHash = placeholder
+				val isLowEndDevice = DeviceMemoryUtils.isLowEndDevice(context)
+				val shouldUseBlurHash = url != null && blurHash != null && !isLowEndDevice
 
-				// Only show blurhash if an image is going to be loaded from the network
-				if (url != null && blurHash != null) {
+				if (shouldUseBlurHash) {
 					placeholderOrBlurHash = if (progressiveBlurHash) {
 						loadProgressiveBlurHash(blurHash, aspectRatio, blurHashResolution)
 					} else {
 						loadSingleBlurHash(blurHash, aspectRatio, blurHashResolution)
 					}
+				} else if (url != null && blurHash != null && isLowEndDevice) {
+					Timber.d("BlurHash disabled for low-end device (${DeviceMemoryUtils.getTotalMemoryMB(context)}MB RAM)")
 				}
 
 				// Start loading image or placeholder

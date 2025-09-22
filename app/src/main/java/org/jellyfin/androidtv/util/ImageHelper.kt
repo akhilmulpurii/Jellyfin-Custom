@@ -34,7 +34,7 @@ class ImageHelper(
 		const val ASPECT_RATIO_BANNER = 1000.0 / 185.0
 
 		// Default max height for standard definition
-		private const val MAX_IMAGE_HEIGHT_SD = 480
+		private const val MAX_IMAGE_HEIGHT_SD = 720
 		// Max height for high definition
 		private const val MAX_IMAGE_HEIGHT_HD = 1080
 		// Max height for 4K UHD

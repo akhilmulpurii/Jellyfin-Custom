@@ -36,6 +36,9 @@ import java.time.LocalDateTime;
 import java.util.Locale;
 
 import kotlin.Lazy;
+import timber.log.Timber;
+import coil3.ImageLoader;
+import coil3.request.ImageRequest;
 
 public class CardPresenter extends Presenter {
     private int mStaticHeight = 150;
@@ -46,6 +49,18 @@ public class CardPresenter extends Presenter {
     private boolean isUniformAspect = false;
     private boolean isHomeScreen = false;
     private final Lazy<ImageHelper> imageHelper = KoinJavaComponent.<ImageHelper>inject(ImageHelper.class);
+
+    // Performance optimization: Cache ImageLoader instance
+    private ImageLoader cachedImageLoader;
+
+    // Performance optimization: Cache common drawables
+    private Drawable cachedTilePortVideo;
+    private Drawable cachedTileTv;
+    private Drawable cachedFakeBlur;
+    private Drawable cachedTilePortPerson;
+    private Drawable cachedTileChapter;
+    private Drawable cachedTileLandSeriesTimer;
+    private Drawable cachedStarDrawable;
 
     public CardPresenter() {
         super();
@@ -73,7 +88,6 @@ public class CardPresenter extends Presenter {
     class ViewHolder extends Presenter.ViewHolder {
         private int cardWidth = 104; // 115 * 0.9
         private int cardHeight = 126; // 140 * 0.9
-        
         private double aspect;
         private boolean isUserView = false;
 
@@ -82,11 +96,16 @@ public class CardPresenter extends Presenter {
         private Drawable mDefaultCardImage;
         public boolean focusListenerSet = false;
 
+        // Add field to track pending image load
+        private volatile boolean hasPendingImageLoad = false;
+        private volatile String currentImageUrl = null;
+
         public ViewHolder(View view) {
             super(view);
 
             mCardView = (LegacyImageCardView) view;
-            mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_port_video);
+            // Performance optimization: Use cached drawable from outer class
+            mDefaultCardImage = CardPresenter.this.cachedTilePortVideo;
         }
 
         public int getCardWidth() {
@@ -142,16 +161,16 @@ public class CardPresenter extends Presenter {
                             break;
                         case SEASON:
                         case SERIES:
-                            mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_port_tv);
+                            mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.fakeblur);
                             if (imageType.equals(ImageType.POSTER))
                                 aspect = ImageHelper.ASPECT_RATIO_2_3;
                             break;
                         case EPISODE:
                             if (m instanceof BaseItemDtoBaseRowItem && ((BaseItemDtoBaseRowItem) m).getPreferSeriesPoster()) {
-                                mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_port_tv);
+                                mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.fakeblur);
                                 aspect = ImageHelper.ASPECT_RATIO_2_3;
                             } else {
-                                mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_land_tv);
+                                mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.fakeblur);
                                 aspect = ImageHelper.ASPECT_RATIO_16_9;
                                 // Reduce size by 10% for home screen
                                 cardWidth = (int)(cardWidth * 0.9);
@@ -182,7 +201,7 @@ public class CardPresenter extends Presenter {
                             // Force the aspect ratio to 16x9 because the server is returning the wrong value of 1
                             // When this is fixed we should still force 16x9 if an image is not set to be consistent
                             aspect = ImageHelper.ASPECT_RATIO_16_9;
-                            mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_land_folder);
+                            mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.fakeblur);
                             isUserView = true;
                             break;
                         case FOLDER:
@@ -197,17 +216,17 @@ public class CardPresenter extends Presenter {
                         case PHOTO_ALBUM:
                         case PLAYLIST:
                             showWatched = false;
-                            mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_port_folder);
+                            mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.fakeblur);
                             break;
                         case MOVIE:
                         case VIDEO:
-                            mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_port_video);
+                            mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.fakeblur);
                             showProgress = true;
                             if (imageType.equals(ImageType.POSTER))
                                 aspect = ImageHelper.ASPECT_RATIO_2_3;
                             break;
                         default:
-                            mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_port_video);
+                            mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.fakeblur);
                             if (imageType.equals(ImageType.POSTER))
                                 aspect = ImageHelper.ASPECT_RATIO_2_3;
                             break;
@@ -274,7 +293,7 @@ public class CardPresenter extends Presenter {
                         }
                     }
                     mCardView.setMainImageDimensions(192, 129, ImageView.ScaleType.CENTER_INSIDE);
-                    mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_land_tv);
+                    mDefaultCardImage = CardPresenter.this.cachedFakeBlur;
                     //Always show info for programs
                     mCardView.setCardType(BaseCardView.CARD_TYPE_INFO_UNDER);
                     break;
@@ -287,31 +306,31 @@ public class CardPresenter extends Presenter {
                         cardWidth = 115;  //Guard against zero size images causing picasso to barf
                     }
                     mCardView.setMainImageDimensions(cardWidth, cardHeight);
-                    mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_port_tv);
+                    mDefaultCardImage = CardPresenter.this.cachedTileTv;
                     break;
                 case Person:
                     cardHeight = !m.getStaticHeight() ? pHeight : sHeight;
                     cardWidth = (int) (ImageHelper.ASPECT_RATIO_7_9 * cardHeight);
                     mCardView.setMainImageDimensions(cardWidth, cardHeight);
-                    mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_port_person);
+                    mDefaultCardImage = CardPresenter.this.cachedTilePortPerson;
                     break;
                 case Chapter:
                     cardHeight = !m.getStaticHeight() ? pHeight : sHeight;
                     cardWidth = (int) (ImageHelper.ASPECT_RATIO_16_9 * cardHeight);
                     mCardView.setMainImageDimensions(cardWidth, cardHeight);
-                    mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_chapter);
+                    mDefaultCardImage = CardPresenter.this.cachedTileChapter;
                     break;
                 case GridButton:
                     cardHeight = !m.getStaticHeight() ? pHeight : sHeight;
                     cardWidth = (int) (ImageHelper.ASPECT_RATIO_7_9 * cardHeight);
                     mCardView.setMainImageDimensions(cardWidth, cardHeight);
-                    mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_port_video);
+                    mDefaultCardImage = CardPresenter.this.cachedTilePortVideo;
                     break;
                 case SeriesTimer:
                     cardHeight = !m.getStaticHeight() ? pHeight : sHeight;
                     cardWidth = (int) (ImageHelper.ASPECT_RATIO_16_9 * cardHeight);
                     mCardView.setMainImageDimensions(cardWidth, cardHeight);
-                    mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_land_series_timer);
+                    mDefaultCardImage = CardPresenter.this.cachedTileLandSeriesTimer;
                     //Always show info for timers
                     mCardView.setCardType(BaseCardView.CARD_TYPE_INFO_UNDER);
                     break;
@@ -323,7 +342,71 @@ public class CardPresenter extends Presenter {
         }
 
         protected void updateCardViewImage(@Nullable String url, @Nullable String blurHash) {
-            mCardView.getMainImageView().load(url, blurHash, mDefaultCardImage, aspect, 32);
+            if (hasPendingImageLoad) {
+                mCardView.getMainImageView().setImageDrawable(null);
+                hasPendingImageLoad = false;
+            }
+            currentImageUrl = url;
+
+            if (url != null && url.equals(currentImageUrl)) {
+                hasPendingImageLoad = true;
+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    mCardView.getMainImageView().load(url, blurHash, mDefaultCardImage, aspect, 32);
+                } else {
+                    loadImageCompat(url, mDefaultCardImage);
+                }
+
+                // Performance optimization: Use shorter delay and more efficient cleanup
+                mCardView.postDelayed(() -> {
+                    if (url.equals(currentImageUrl)) {
+                        hasPendingImageLoad = false;
+                    }
+                }, 25); // Reduced from 50ms to 25ms
+            } else {
+                mCardView.getMainImageView().setImageDrawable(mDefaultCardImage);
+            }
+        }
+
+        /**
+         * Compatibility method for loading images on API 21-22
+         */
+        private void loadImageCompat(@Nullable String url, @Nullable Drawable placeholder) {
+            if (url == null) {
+                mCardView.getMainImageView().setImageDrawable(placeholder);
+                return;
+            }
+
+            // Performance optimization:  cached ImageLoader
+            try {
+                coil3.request.ImageRequest request = new coil3.request.ImageRequest.Builder(mCardView.getContext())
+                    .data(url)
+                    .target(
+                        /* onStart */ (coil3.Image placeholderImage) -> {
+                            if (placeholder != null) {
+                                mCardView.getMainImageView().setImageDrawable(placeholder);
+                            }
+                            return null;
+                        },
+                        /* onSuccess */ (coil3.Image image) -> {
+                            mCardView.getMainImageView().setImageDrawable((android.graphics.drawable.Drawable) image);
+                            return null;
+                        },
+                        /* onError */ (coil3.Image error) -> {
+                            if (placeholder != null) {
+                                mCardView.getMainImageView().setImageDrawable(placeholder);
+                            }
+                            return null;
+                        }
+                    )
+                    .build();
+
+                cachedImageLoader.enqueue(request);
+            } catch (Exception e) {
+                // Fallback to placeholder if image loading fails
+                mCardView.getMainImageView().setImageDrawable(placeholder);
+                Timber.tag("CardPresenter").e(e, "Error loading image compat");
+            }
         }
 
         protected void resetCardView() {
@@ -333,12 +416,17 @@ public class CardPresenter extends Presenter {
             mCardView.setRating(null);
             mCardView.setBadgeImage(null);
 
+            // Cancel any pending image load and clear image
+            hasPendingImageLoad = false;
+            currentImageUrl = null;
             mCardView.getMainImageView().setImageDrawable(null);
         }
     }
 
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent) {
+        initializeCachedResources(parent.getContext());
+
         LegacyImageCardView cardView = new LegacyImageCardView(parent.getContext(), mShowInfo);
         cardView.setFocusable(true);
         cardView.setFocusableInTouchMode(true);
@@ -360,11 +448,11 @@ public class CardPresenter extends Presenter {
         BaseRowItem rowItem = (BaseRowItem) item;
 
         ViewHolder holder = (ViewHolder) viewHolder;
-        
+        holder.hasPendingImageLoad = false;
+        holder.currentImageUrl = null;
         // Initialize holder fields from presenter
         holder.aspect = aspect;
         holder.isUserView = isUserView;
-        
         // Set basic card properties first
         holder.setItem(rowItem, mImageType, 130, 150, mStaticHeight);
 
@@ -378,7 +466,6 @@ public class CardPresenter extends Presenter {
             // Set text content
             holder.mCardView.setTitleText(rowItem.getCardName(holder.mCardView.getContext()));
             holder.mCardView.setContentText(rowItem.getSubText(holder.mCardView.getContext()));
-            
             // Set basic indicators
             holder.mCardView.showFavIcon(rowItem.isFavorite());
             if (rowItem instanceof AudioQueueBaseRowItem && ((AudioQueueBaseRowItem) rowItem).getPlaying()) {
@@ -391,7 +478,6 @@ public class CardPresenter extends Presenter {
             if (ImageType.POSTER.equals(mImageType)) {
                 holder.mCardView.setOverlayInfo(rowItem);
             }
-            
             // Set up optimized focus handling only once per view holder
             setupFocusHandling(holder);
 
@@ -402,13 +488,11 @@ public class CardPresenter extends Presenter {
             loadImageAsync(holder, rowItem);
         }
     }
-    
     private void setupFocusHandling(ViewHolder holder) {
         // Only set up focus handling once per view holder to avoid duplicate listeners
         if (holder.focusListenerSet) {
             return;
         }
-        
         // Set minimal elevation for focus effects
         final float minElevation = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP,
@@ -451,15 +535,12 @@ public class CardPresenter extends Presenter {
                 }
             }
         });
-        
         holder.focusListenerSet = true;
     }
-    
     private void loadRatingAndBadgeAsync(ViewHolder holder, BaseRowItem rowItem) {
         // Use a lightweight approach for rating and badge loading
         if (rowItem.getBaseItem() != null && rowItem.getBaseItem().getType() != BaseItemKind.USER_VIEW) {
             RatingType ratingType = KoinJavaComponent.<UserPreferences>get(UserPreferences.class).get(UserPreferences.Companion.getDefaultRatingType());
-            
             if (ratingType == RatingType.RATING_TOMATOES) {
                 // Load badge asynchronously
                 holder.mCardView.post(() -> {
@@ -468,17 +549,16 @@ public class CardPresenter extends Presenter {
                         holder.mCardView.setBadgeImage(badge);
                     }
                 });
-            } else if (ratingType == RatingType.RATING_STARS && 
+            } else if (ratingType == RatingType.RATING_STARS &&
                        rowItem.getBaseItem().getCommunityRating() != null) {
                 // Set star badge and rating
                 holder.mCardView.post(() -> {
-                    holder.mCardView.setBadgeImage(ContextCompat.getDrawable(holder.view.getContext(), R.drawable.ic_star));
+                    holder.mCardView.setBadgeImage(CardPresenter.this.cachedStarDrawable);
                     holder.mCardView.setRating(String.format(Locale.US, "%.1f", rowItem.getBaseItem().getCommunityRating()));
                 });
             }
         }
     }
-    
     private void loadImageAsync(ViewHolder holder, BaseRowItem rowItem) {
         // Post image loading to avoid blocking the main thread
         holder.mCardView.post(() -> {
@@ -508,8 +588,8 @@ public class CardPresenter extends Presenter {
                     image == null ? null : image.getBlurHash()
                 );
             } catch (Exception e) {
-                // Log error but don't crash
-                android.util.Log.e("CardPresenter", "Error loading image", e);
+                // Log error
+                Timber.tag("CardPresenter").e(e, "Error loading image");
             }
         });
     }
@@ -525,5 +605,21 @@ public class CardPresenter extends Presenter {
 
     public void setUniformAspect(boolean uniformAspect) {
         isUniformAspect = uniformAspect;
+    }
+
+    private void initializeCachedResources(android.content.Context context) {
+        if (cachedImageLoader == null) {
+            // ImageLoader instance
+            cachedImageLoader = new coil3.ImageLoader.Builder(context).build();
+
+            // common drawables
+            cachedTilePortVideo = ContextCompat.getDrawable(context, R.drawable.tile_port_video);
+            cachedTileTv = ContextCompat.getDrawable(context, R.drawable.tile_tv);
+            cachedFakeBlur = ContextCompat.getDrawable(context, R.drawable.fakeblur);
+            cachedTilePortPerson = ContextCompat.getDrawable(context, R.drawable.tile_port_person);
+            cachedTileChapter = ContextCompat.getDrawable(context, R.drawable.tile_chapter);
+            cachedTileLandSeriesTimer = ContextCompat.getDrawable(context, R.drawable.tile_land_series_timer);
+            cachedStarDrawable = ContextCompat.getDrawable(context, R.drawable.ic_star);
+        }
     }
 }
