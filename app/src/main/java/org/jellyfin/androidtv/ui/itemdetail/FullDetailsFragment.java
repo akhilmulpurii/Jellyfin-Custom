@@ -502,8 +502,11 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
             bgWidth = 1920;
             bgHeight = 1080;
         }
-        // Revert: Only use original item-based background
-        backgroundService.getValue().setBackground(item);
+        if (item.getType() != BaseItemKind.PERSON && item.getType() != BaseItemKind.MUSIC_ARTIST) {
+            backgroundService.getValue().setBackground(item);
+        } else {
+            backgroundService.getValue().clearBackgrounds();
+        }
         if (mBaseItem != null) {
             if (mChannelId != null) {
                 mBaseItem = JavaCompat.copyWithParentId(mBaseItem, mChannelId);
