@@ -145,9 +145,9 @@ public class CardPresenter extends Presenter {
                     org.jellyfin.sdk.model.api.BaseItemDto itemDto = mItem.getBaseItem();
                     boolean showWatched = true;
                     boolean showProgress = false;
-                    if (imageType.equals(ImageType.BANNER)) {
+                    if (imageType != null && imageType.equals(ImageType.BANNER)) {
                         aspect = ImageHelper.ASPECT_RATIO_BANNER;
-                    } else if (imageType.equals(ImageType.THUMB)) {
+                    } else if (imageType != null && imageType.equals(ImageType.THUMB)) {
                         aspect = ImageHelper.ASPECT_RATIO_16_9;
                     } else {
                         aspect = imageHelper.getValue().getImageAspectRatio(itemDto, m.getPreferParentThumb());
@@ -178,7 +178,7 @@ public class CardPresenter extends Presenter {
                         case SEASON:
                         case SERIES:
                             mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.fakeblur);
-                            if (imageType.equals(ImageType.POSTER))
+                            if (imageType != null && imageType.equals(ImageType.POSTER))
                                 aspect = ImageHelper.ASPECT_RATIO_2_3;
                             break;
                         case EPISODE:
@@ -240,19 +240,19 @@ public class CardPresenter extends Presenter {
                         case VIDEO:
                             mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.fakeblur);
                             showProgress = true;
-                            if (imageType.equals(ImageType.POSTER))
+                            if (imageType != null && imageType.equals(ImageType.POSTER))
                                 aspect = ImageHelper.ASPECT_RATIO_2_3;
                             break;
                         default:
                             mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.fakeblur);
-                            if (imageType.equals(ImageType.POSTER))
+                            if (imageType != null && imageType.equals(ImageType.POSTER))
                                 aspect = ImageHelper.ASPECT_RATIO_2_3;
                             break;
                     }
                     cardHeight = !m.getStaticHeight() ? (aspect > 1 ? lHeight : pHeight) : sHeight;
                     cardWidth = (int) (aspect * cardHeight);
-
-                    // For List layout, we have specific dimensions for each image type
+                    
+                    // For List layout, use specific dimensions for each image type
                     if (isListLayout && mImageType != null) {
                         switch (mImageType) {
                             case POSTER:
@@ -268,10 +268,11 @@ public class CardPresenter extends Presenter {
                                 cardHeight = (int) Math.round(cardWidth / aspect);
                                 break;
                             default:
+                                // Use calculated dimensions for other types
                                 break;
                         }
                     }
-
+                    
                     if (cardWidth < 5) {
                         cardWidth = 115;  //Guard against zero size images causing picasso to barf
                     }
@@ -310,13 +311,17 @@ public class CardPresenter extends Presenter {
                         }
                     }
 
-                    if (showProgress && itemDto.getRunTimeTicks() > 0 && userData != null && userData.getPlaybackPositionTicks() > 0) {
-                        if (mCardView instanceof LegacyImageCardView) {
-                            ((LegacyImageCardView) mCardView).setProgress(((int) (userData.getPlaybackPositionTicks() * 100.0 / itemDto.getRunTimeTicks()))); // force floating pt math with 100.0
-                        }
-                    } else {
-                        if (mCardView instanceof LegacyImageCardView) {
-                            ((LegacyImageCardView) mCardView).setProgress(0);
+                    if (showProgress && itemDto != null && userData != null) {
+                        Long runTimeTicks = itemDto.getRunTimeTicks();
+                        Long playbackPositionTicks = userData.getPlaybackPositionTicks();
+                        if (runTimeTicks != null && runTimeTicks > 0 && playbackPositionTicks != null && playbackPositionTicks > 0) {
+                            if (mCardView instanceof LegacyImageCardView) {
+                                ((LegacyImageCardView) mCardView).setProgress(((int) (userData.getPlaybackPositionTicks() * 100.0 / itemDto.getRunTimeTicks()))); // force floating pt math with 100.0
+                            }
+                        } else {
+                            if (mCardView instanceof LegacyImageCardView) {
+                                ((LegacyImageCardView) mCardView).setProgress(0);
+                            }
                         }
                     }
                     if (mCardView instanceof LegacyImageCardView) {
@@ -328,8 +333,8 @@ public class CardPresenter extends Presenter {
                 case LiveTvChannel:
                     org.jellyfin.sdk.model.api.BaseItemDto channel = mItem.getBaseItem();
                     // TODO: Is it even possible to have channels with banners or thumbs?
-                    double tvAspect = imageType.equals(ImageType.BANNER) ? ImageHelper.ASPECT_RATIO_BANNER :
-                        imageType.equals(ImageType.THUMB) ? ImageHelper.ASPECT_RATIO_16_9 :
+                    double tvAspect = (imageType != null && imageType.equals(ImageType.BANNER)) ? ImageHelper.ASPECT_RATIO_BANNER :
+                        (imageType != null && imageType.equals(ImageType.THUMB)) ? ImageHelper.ASPECT_RATIO_16_9 :
                         Utils.getSafeValue(channel.getPrimaryImageAspectRatio(), 1.0);
                     cardHeight = !m.getStaticHeight() ? tvAspect > 1 ? lHeight : pHeight : sHeight;
                     cardWidth = (int) ((tvAspect) * cardHeight);
@@ -372,7 +377,7 @@ public class CardPresenter extends Presenter {
                     break;
                 case LiveTvRecording:
                     BaseItemDto recording = mItem.getBaseItem();
-                    double recordingAspect = imageType.equals(ImageType.BANNER) ? ImageHelper.ASPECT_RATIO_BANNER : (imageType.equals(ImageType.THUMB) ? ImageHelper.ASPECT_RATIO_16_9 : Utils.getSafeValue(recording.getPrimaryImageAspectRatio(), ImageHelper.ASPECT_RATIO_7_9));
+                    double recordingAspect = (imageType != null && imageType.equals(ImageType.BANNER)) ? ImageHelper.ASPECT_RATIO_BANNER : ((imageType != null && imageType.equals(ImageType.THUMB)) ? ImageHelper.ASPECT_RATIO_16_9 : Utils.getSafeValue(recording.getPrimaryImageAspectRatio(), ImageHelper.ASPECT_RATIO_7_9));
                     cardHeight = !m.getStaticHeight() ? recordingAspect > 1 ? lHeight : pHeight : sHeight;
                     cardWidth = (int) ((recordingAspect) * cardHeight);
                     if (cardWidth < 5) {
@@ -539,19 +544,22 @@ public class CardPresenter extends Presenter {
         initializeCachedResources(parent.getContext());
 
         BaseCardView cardView;
-
+        
         // Use different card view based on layout mode
         if (isListLayout) {
+            // For List layout, use InfoUnderSummaryCardView with horizontal layout
             cardView = new InfoUnderSummaryCardView(parent.getContext());
             cardView.setCardType(InfoUnderSummaryCardView.CARD_TYPE_INFO_UNDER_SUMMARY);
         } else {
+            // For other layouts, use LegacyImageCardView
             LegacyImageCardView legacyCardView = new LegacyImageCardView(parent.getContext(), mShowInfo);
             if (!mShowInfo) {
+                // For non-List layout with showInfo=false, use MAIN_ONLY
                 legacyCardView.setCardType(BaseCardView.CARD_TYPE_MAIN_ONLY);
             }
             cardView = legacyCardView;
         }
-
+        
         cardView.setFocusable(true);
         cardView.setFocusableInTouchMode(true);
 
@@ -587,34 +595,42 @@ public class CardPresenter extends Presenter {
             holder.mCardView.setElevation(0);
             holder.mCardView.setSelected(false);
 
+            // Handle different card types
             if (holder.mCardView instanceof InfoUnderSummaryCardView) {
                 // Use InfoUnderSummaryCardView specific methods
                 InfoUnderSummaryCardView infoCardView = (InfoUnderSummaryCardView) holder.mCardView;
-
+                
                 // Set title, summary, and ratings
                 infoCardView.setTitle(rowItem.getCardName(infoCardView.getContext()));
                 infoCardView.setSummary(rowItem.getSummary(infoCardView.getContext()) != null ? rowItem.getSummary(infoCardView.getContext()) : "");
-
+                
                 BaseItemDto itemDto = rowItem.getBaseItem();
                 if (itemDto != null) {
                     infoCardView.setCommunityRating(itemDto.getCommunityRating());
                     infoCardView.setCriticRating(itemDto.getCriticRating());
                     infoCardView.setYear(itemDto.getProductionYear());
                     infoCardView.setDuration(itemDto.getRunTimeTicks());
-
+                    
+                    // Set watched indicator
                     if (itemDto.getUserData() != null) {
                         boolean watched = itemDto.getUserData().getPlayed();
-                        int unwatchedCount = itemDto.getUserData().getUnplayedItemCount() != null ?
+                        int unwatchedCount = itemDto.getUserData().getUnplayedItemCount() != null ? 
                             itemDto.getUserData().getUnplayedItemCount() : 0;
                         infoCardView.setWatchedIndicator(watched, unwatchedCount);
-
-                        if (itemDto.getUserData() != null && itemDto.getUserData().getPlaybackPositionTicks() > 0 && itemDto.getRunTimeTicks() > 0) {
-                            int progress = (int) ((itemDto.getUserData().getPlaybackPositionTicks() * 100) / itemDto.getRunTimeTicks());
-                            infoCardView.setResumeProgress(progress);
+                        
+                        // Set resume progress
+                        if (itemDto.getUserData() != null) {
+                            Long runTimeTicks = itemDto.getRunTimeTicks();
+                            Long playbackPositionTicks = itemDto.getUserData().getPlaybackPositionTicks();
+                            if (runTimeTicks != null && runTimeTicks > 0 && playbackPositionTicks != null && playbackPositionTicks > 0) {
+                                int progress = (int) ((itemDto.getUserData().getPlaybackPositionTicks() * 100) / itemDto.getRunTimeTicks());
+                                infoCardView.setResumeProgress(progress);
+                            }
                         }
                     }
                 }
             } else if (holder.mCardView instanceof LegacyImageCardView) {
+                // Use LegacyImageCardView methods for other card types
                 LegacyImageCardView legacyCardView = (LegacyImageCardView) holder.mCardView;
                 legacyCardView.setTitleText(rowItem.getCardName(legacyCardView.getContext()));
                 legacyCardView.setContentText(rowItem.getSubText(legacyCardView.getContext()));
@@ -632,6 +648,7 @@ public class CardPresenter extends Presenter {
                     ((LegacyImageCardView) holder.mCardView).setOverlayInfo(rowItem);
                 }
             }
+            // Set overlay info for all image types in List layout (only for LegacyImageCardView)
             if (isListLayout && holder.mCardView instanceof LegacyImageCardView) {
                 ((LegacyImageCardView) holder.mCardView).setOverlayInfo(rowItem);
             }
@@ -744,7 +761,7 @@ public class CardPresenter extends Presenter {
                 int fillHeight = Math.round(holder.getCardHeight() * holder.mCardView.getResources().getDisplayMetrics().density);
 
                 holder.updateCardViewImage(
-                    image == null ? rowItem.getImageUrl(holder.mCardView.getContext(), imageHelper.getValue(), mImageType, fillWidth, fillHeight) : imageHelper.getValue().getImageUrl(image),
+                    image == null ? rowItem.getImageUrl(holder.mCardView.getContext(), imageHelper.getValue(), mImageType != null ? mImageType : ImageType.POSTER, fillWidth, fillHeight) : imageHelper.getValue().getImageUrl(image),
                     image == null ? null : image.getBlurHash()
                 );
             } catch (Exception e) {
