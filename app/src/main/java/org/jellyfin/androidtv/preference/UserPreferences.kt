@@ -7,15 +7,16 @@ import org.jellyfin.androidtv.preference.constant.AppLanguage
 import org.jellyfin.androidtv.preference.constant.AppTheme
 import org.jellyfin.androidtv.preference.constant.AudioBehavior
 import org.jellyfin.androidtv.preference.constant.ClockBehavior
+import org.jellyfin.androidtv.preference.constant.GenreSortBy
 import org.jellyfin.androidtv.preference.constant.NextUpBehavior
 import org.jellyfin.androidtv.preference.constant.RatingType
 import org.jellyfin.androidtv.preference.constant.RefreshRateSwitchingBehavior
+import org.jellyfin.androidtv.preference.constant.SkipDuration
 import org.jellyfin.androidtv.preference.constant.SubtitleLanguage
 import org.jellyfin.androidtv.preference.UserPreferences.Companion.screensaverInAppEnabled
 import org.jellyfin.androidtv.preference.constant.AudioLanguage
 import org.jellyfin.androidtv.preference.constant.WatchedIndicatorBehavior
 import org.jellyfin.androidtv.preference.constant.ZoomMode
-import org.jellyfin.androidtv.preference.constant.GenreSortBy
 import org.jellyfin.androidtv.ui.playback.segment.MediaSegmentAction
 import org.jellyfin.androidtv.ui.playback.segment.toMediaSegmentActionsString
 import org.jellyfin.preference.booleanPreference
@@ -285,6 +286,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 				MediaSegmentType.OUTRO to MediaSegmentAction.ASK_TO_SKIP,
 			).toMediaSegmentActionsString()
 		)
+
+		/**
+		 * Duration for the skip button visibility timer.
+		 */
+		var skipDuration = enumPreference("skip_duration", SkipDuration.DEFAULT_8_SECONDS)
 
 		/**
 		 * Preferred behavior for player aspect ratio (zoom mode).
