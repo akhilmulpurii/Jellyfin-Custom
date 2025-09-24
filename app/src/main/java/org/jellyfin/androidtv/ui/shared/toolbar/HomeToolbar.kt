@@ -119,7 +119,7 @@ fun HomeToolbar(
                     .size(36.dp) // 40dp - 10%
                     .clip(CircleShape)
                     .background(
-                        if (isFocused) Color.White.copy(alpha = 0.35f) else Color.Transparent,
+                        if (isFocused) Color.White.copy(alpha = 0.65f) else Color.Transparent,
                         CircleShape
                     ),
                 contentAlignment = Alignment.Center
@@ -168,7 +168,7 @@ fun HomeToolbar(
                     .size(36.dp) // 40dp - 10%
                     .clip(CircleShape)
                     .background(
-                        if (isSearchFocused) Color.White.copy(alpha = 0.35f) else Color.Transparent,
+                        if (isSearchFocused) Color.White.copy(alpha = 0.65f) else Color.Transparent,
                         CircleShape
                     ),
                 contentAlignment = Alignment.Center
@@ -181,7 +181,7 @@ fun HomeToolbar(
                     Icon(
                         painter = painterResource(R.drawable.ic_search),
                         contentDescription = stringResource(R.string.lbl_search),
-                        tint = Color.White,
+                        tint = if (isSearchFocused) Color.Black else Color.White,
                         modifier = Modifier.size(21.dp) // 22dp - 5%
                     )
                 }
@@ -197,7 +197,7 @@ fun HomeToolbar(
                     .size(36.dp) // 40dp - 10%
                     .clip(CircleShape)
                     .background(
-                        if (isLibraryFocused) Color.White.copy(alpha = 0.35f) else Color.Transparent,
+                        if (isLibraryFocused) Color.White.copy(alpha = 0.65f) else Color.Transparent,
                         CircleShape
                     ),
                 contentAlignment = Alignment.Center
@@ -210,7 +210,7 @@ fun HomeToolbar(
                     Icon(
                         painter = painterResource(R.drawable.ic_loop),
                         contentDescription = stringResource(R.string.lbl_library),
-                        tint = Color.White,
+                        tint = if (isLibraryFocused) Color.Black else Color.White,
                         modifier = Modifier.size(21.dp) // 22dp - 5%
                     )
                 }
@@ -227,7 +227,7 @@ fun HomeToolbar(
                         .size(34.dp) // 38dp - 10%
                         .clip(CircleShape)
                         .background(
-                            if (isLiveTvFocused) Color.White.copy(alpha = 0.35f) else Color.Transparent,
+                            if (isLiveTvFocused) Color.White.copy(alpha = 0.65f) else Color.Transparent,
                             CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -240,7 +240,7 @@ fun HomeToolbar(
                         Icon(
                             painter = painterResource(R.drawable.ic_livetv),
                             contentDescription = stringResource(R.string.lbl_live_tv),
-                            tint = Color.White,
+                            tint = if (isLiveTvFocused) Color.Black else Color.White,
                             modifier = Modifier.size(22.dp) // 22dp - 5%
                         )
                     }
@@ -320,7 +320,7 @@ fun HomeToolbar(
                         Icon(
                             painter = painterResource(R.drawable.ic_masks),
                             contentDescription = stringResource(R.string.show_random_button_summary),
-                            tint = Color.White,
+                            tint = if (isMasksFocused) Color.Black else Color.White,
                             modifier = Modifier.size(21.dp) // 22dp - 5%
                         )
                     }
@@ -336,7 +336,7 @@ fun HomeToolbar(
                     .size(36.dp) // 40dp - 10%
                     .clip(CircleShape)
                     .background(
-                        if (isSettingsFocused) Color.White.copy(alpha = 0.35f) else Color.Transparent,
+                        if (isSettingsFocused) Color.White.copy(alpha = 0.65f) else Color.Transparent,
                         CircleShape
                     ),
                 contentAlignment = Alignment.Center
@@ -349,7 +349,7 @@ fun HomeToolbar(
                     Icon(
                         painter = painterResource(R.drawable.ic_settings),
                         contentDescription = stringResource(R.string.lbl_settings),
-                        tint = if (isSettingsFocused) Color.White else Color.White.copy(alpha = 0.7f),
+                        tint = if (isSettingsFocused) Color.Black else Color.White.copy(alpha = 0.7f),
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -377,7 +377,7 @@ fun HomeToolbar(
                     Icon(
                         painter = painterResource(R.drawable.ic_heart),
                         contentDescription = stringResource(R.string.lbl_favorites),
-                        tint = if (isFavoritesFocused) Color.White else Color.White.copy(alpha = 0.7f),
+                        tint = if (isFavoritesFocused) Color.Red else Color.White.copy(alpha = 0.95f),
                         modifier = Modifier.size(24.dp)
                     )
                 }
