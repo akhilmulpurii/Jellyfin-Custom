@@ -848,17 +848,6 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                 mDetailsOverviewRow.addAction(externalPlayerButton);
             }
 
-            if (BaseItemExtensionsKt.canPlay(mBaseItem) && mBaseItem.getId() != null) {
-                TextUnderButton pluginButton = TextUnderButton.create(requireContext(),
-                        R.drawable.ic_select_subtitle, buttonSize, 2,
-                    getString(R.string.lbl_Subtitles), new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            interactWithServerPlugin();
-                        }
-                    });
-                mDetailsOverviewRow.addAction(pluginButton);
-            }
 
             if (resumeButtonVisible) {
                 mResumeButton.requestFocus();
@@ -1120,6 +1109,18 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
             });
             mDetailsOverviewRow.addAction(del);
 
+        }
+
+        if (BaseItemExtensionsKt.canPlay(mBaseItem) && mBaseItem.getId() != null) {
+            TextUnderButton pluginButton = TextUnderButton.create(requireContext(),
+                    R.drawable.ic_select_subtitle, buttonSize, 2,
+                getString(R.string.lbl_Subtitles), new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        interactWithServerPlugin();
+                    }
+                });
+            mDetailsOverviewRow.addAction(pluginButton);
         }
 
         //Now, create a more button to show if needed

@@ -109,7 +109,7 @@ class HomeFragmentHelper(
 
                         // Set fixed dimensions for all cards in the row
                         (viewHolder.view as? LegacyImageCardView)?.let { cardView ->
-                            cardView.setMainImageDimensions(220, 128) // Standard card dimensions for episode cards
+                            cardView.setMainImageDimensions(228, 122) // Standard card dimensions for episode cards
                             // Set card type to not show info below
                             cardView.cardType = BaseCardView.CARD_TYPE_INFO_UNDER_WITH_EXTRA
                         }
@@ -171,7 +171,7 @@ class HomeFragmentHelper(
 
                         // Set fixed dimensions for all cards in the rows
                         (viewHolder.view as? LegacyImageCardView)?.let { cardView ->
-                            cardView.setMainImageDimensions(220, 128) // Standard card dimensions for episode cards
+                            cardView.setMainImageDimensions(228, 122) // Standard card dimensions for episode cards
                             // Set card type to show info below
                             cardView.cardType = BaseCardView.CARD_TYPE_INFO_UNDER
                         }

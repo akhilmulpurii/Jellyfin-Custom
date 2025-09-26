@@ -32,7 +32,6 @@ import androidx.lifecycle.Lifecycle;
 import org.jellyfin.androidtv.R;
 import org.jellyfin.androidtv.constant.CustomMessage;
 import org.jellyfin.androidtv.constant.Extras;
-import org.jellyfin.androidtv.constant.ImageType;
 import org.jellyfin.androidtv.constant.LiveTvOption;
 import org.jellyfin.androidtv.constant.QueryType;
 import org.jellyfin.androidtv.data.model.DataRefreshService;
@@ -253,34 +252,65 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
 
     public void loadRows(List<BrowseRowDef> rows) {
         mRowsAdapter = new MutableObjectAdapter<>(new PositionableListRowPresenter());
-        // Match home screen card configuration but hide info text
-    mCardPresenter = new CardPresenter(false, 195); // Set showInfo to false to hide text below cards
-    mCardPresenter.setHomeScreen(true);
+
         ClassPresenterSelector ps = new ClassPresenterSelector();
         ps.addClassPresenter(GridButtonBaseRowItem.class, new GridButtonPresenter(155, 140));
+
+        mCardPresenter = new CardPresenter(false, 170);
+        mCardPresenter.setHomeScreen(true);
         ps.addClassPresenter(BaseRowItem.class, mCardPresenter);
 
         for (BrowseRowDef def : rows) {
             HeaderItem header = new HeaderItem(def.getHeaderText());
+
+            boolean isEpisode = isEpisodeContent(def.getQueryType());
+            CardPresenter rowCardPresenter = createAppropriateCardPresenter(isEpisode);
+            rowCardPresenter.setHomeScreen(true);
+
             ItemRowAdapter rowAdapter = switch (def.getQueryType()) {
-                case NextUp -> new ItemRowAdapter(requireContext(), def.getNextUpQuery(), true, mCardPresenter, mRowsAdapter);
-                case LatestItems -> new ItemRowAdapter(requireContext(), def.getLatestItemsQuery(), true, mCardPresenter, mRowsAdapter);
-                case Views -> new ItemRowAdapter(requireContext(), GetUserViewsRequest.INSTANCE, mCardPresenter, mRowsAdapter);
+                case NextUp -> {
+                    CardPresenter nextUpPresenter = createAppropriateCardPresenter(isEpisode);
+                    nextUpPresenter.setHomeScreen(true);
+                    try {
+                        java.lang.reflect.Field cardWidthField = CardPresenter.class.getDeclaredField("CARD_WIDTH");
+                        cardWidthField.setAccessible(true);
+                        int originalWidth = cardWidthField.getInt(nextUpPresenter);
+                        int newWidth = (int) (originalWidth * 1.15);
+
+                        nextUpPresenter = new CardPresenter(isEpisode, newWidth);
+                        nextUpPresenter.setHomeScreen(true);
+                    } catch (Exception e) {
+                        nextUpPresenter = new CardPresenter(isEpisode, 160);
+                        nextUpPresenter.setHomeScreen(true);
+                    }
+                    yield new ItemRowAdapter(requireContext(), def.getNextUpQuery(), true, nextUpPresenter, mRowsAdapter);
+                }
+                case LatestItems -> {
+                    ItemRowAdapter adapter = new ItemRowAdapter(requireContext(), def.getLatestItemsQuery(), true, rowCardPresenter, mRowsAdapter);
+                    try {
+                        java.lang.reflect.Field staticHeightField = ItemRowAdapter.class.getDeclaredField("staticHeight");
+                        staticHeightField.setAccessible(true);
+                        staticHeightField.set(adapter, false);
+                    } catch (Exception e) {
+                    }
+                    yield adapter;
+                }
+                case Views -> new ItemRowAdapter(requireContext(), GetUserViewsRequest.INSTANCE, rowCardPresenter, mRowsAdapter);
                 case SimilarSeries ->
-                        new ItemRowAdapter(requireContext(), def.getSimilarQuery(), QueryType.SimilarSeries, mCardPresenter, mRowsAdapter);
+                        new ItemRowAdapter(requireContext(), def.getSimilarQuery(), QueryType.SimilarSeries, rowCardPresenter, mRowsAdapter);
                 case SimilarMovies ->
-                        new ItemRowAdapter(requireContext(), def.getSimilarQuery(), QueryType.SimilarMovies, mCardPresenter, mRowsAdapter);
-                case LiveTvChannel -> new ItemRowAdapter(requireContext(), def.getTvChannelQuery(), 40, mCardPresenter, mRowsAdapter);
-                case LiveTvProgram -> new ItemRowAdapter(requireContext(), def.getProgramQuery(), mCardPresenter, mRowsAdapter);
+                        new ItemRowAdapter(requireContext(), def.getSimilarQuery(), QueryType.SimilarMovies, rowCardPresenter, mRowsAdapter);
+                case LiveTvChannel -> new ItemRowAdapter(requireContext(), def.getTvChannelQuery(), 40, rowCardPresenter, mRowsAdapter);
+                case LiveTvProgram -> new ItemRowAdapter(requireContext(), def.getProgramQuery(), rowCardPresenter, mRowsAdapter);
                 case LiveTvRecording ->
-                        new ItemRowAdapter(requireContext(), def.getRecordingQuery(), def.getChunkSize(), mCardPresenter, mRowsAdapter);
+                        new ItemRowAdapter(requireContext(), def.getRecordingQuery(), def.getChunkSize(), rowCardPresenter, mRowsAdapter);
                 case Premieres ->
-                        new ItemRowAdapter(requireContext(), def.getQuery(), def.getChunkSize(), def.getPreferParentThumb(), def.isStaticHeight(), mCardPresenter, mRowsAdapter, def.getQueryType());
-                case SeriesTimer -> new ItemRowAdapter(requireContext(), def.getSeriesTimerQuery(), mCardPresenter, mRowsAdapter);
+                        new ItemRowAdapter(requireContext(), def.getQuery(), def.getChunkSize(), def.getPreferParentThumb(), def.isStaticHeight(), rowCardPresenter, mRowsAdapter, def.getQueryType());
+                case SeriesTimer -> new ItemRowAdapter(requireContext(), def.getSeriesTimerQuery(), rowCardPresenter, mRowsAdapter);
                 case Specials ->
-                        new ItemRowAdapter(requireContext(), def.getSpecialsQuery(), new CardPresenter(false, 150), mRowsAdapter);
+                        new ItemRowAdapter(requireContext(), def.getSpecialsQuery(), createAppropriateCardPresenter(false), mRowsAdapter);
                 default ->
-                        new ItemRowAdapter(requireContext(), def.getQuery(), def.getChunkSize(), def.getPreferParentThumb(), def.isStaticHeight(), ps, mRowsAdapter, def.getQueryType());
+                        new ItemRowAdapter(requireContext(), def.getQuery(), def.getChunkSize(), def.getPreferParentThumb(), def.isStaticHeight(), rowCardPresenter, mRowsAdapter, def.getQueryType());
             };
 
             rowAdapter.setReRetrieveTriggers(def.getChangeTriggers());
@@ -332,6 +362,30 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
         gridRowAdapter.add(new GridButton(GRID, getString(R.string.lbl_all_items)));
         // Disabled because the screen doesn't behave properly
         // gridRowAdapter.add(new GridButton(PERSONS, getString(R.string.lbl_performers)));
+    }
+
+    private CardPresenter createAppropriateCardPresenter(boolean isEpisode) {
+        if (isEpisode) {
+            return new CardPresenter(false, 122);
+        } else {
+            return new CardPresenter(false, 170);
+        }
+    }
+
+    private boolean isEpisodeContent(QueryType queryType) {
+        if (itemType == BaseItemKind.SERIES) {
+            switch (queryType) {
+                case NextUp:
+                case Resume:
+                    // These are actual episodes
+                    return true;
+                case LatestItems:
+                    return false;
+                default:
+                    return false;
+            }
+        }
+        return false;
     }
 
     protected void setupEventListeners() {
