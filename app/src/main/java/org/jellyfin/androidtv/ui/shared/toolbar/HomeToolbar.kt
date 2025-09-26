@@ -174,7 +174,7 @@ fun HomeToolbar(
                         if (isSearchFocused) {
                             modifier
                                 .width(100.dp)
-                                .height(25.dp)
+                                .height(28.dp)
                                 .clip(RoundedCornerShape(20.dp))
                         } else {
                             modifier
@@ -245,7 +245,7 @@ fun HomeToolbar(
                         if (isLibraryFocused) {
                             modifier
                                 .width(100.dp)
-                                .height(25.dp)
+                                .height(28.dp)
                                 .clip(RoundedCornerShape(12.5.dp))
                         } else {
                             modifier
@@ -317,7 +317,7 @@ fun HomeToolbar(
                             if (isLiveTvFocused) {
                                 modifier
                                     .width(100.dp)
-                                    .height(25.dp)
+                                    .height(28.dp)
                                     .clip(RoundedCornerShape(12.5.dp))
                             } else {
                                 modifier
@@ -439,7 +439,7 @@ fun HomeToolbar(
                             if (isMasksFocused) {
                                 modifier
                                     .width(100.dp)
-                                    .height(25.dp)
+                                    .height(28.dp)
                                     .clip(RoundedCornerShape(12.5.dp))
                             } else {
                                 modifier
@@ -510,7 +510,7 @@ fun HomeToolbar(
                         if (isSettingsFocused) {
                             modifier
                                 .width(100.dp)
-                                .height(25.dp)
+                                .height(28.dp)
                                 .clip(RoundedCornerShape(12.5.dp))
                         } else {
                             modifier
@@ -580,7 +580,7 @@ fun HomeToolbar(
                         if (isFavoritesFocused) {
                             modifier
                                 .width(110.dp)
-                                .height(25.dp)
+                                .height(28.dp)
                                 .clip(RoundedCornerShape(12.5.dp))
                         } else {
                             modifier
