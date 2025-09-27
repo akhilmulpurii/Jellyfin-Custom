@@ -85,7 +85,7 @@ android {
 			applicationId = "Dune.enhanced.tv"
 
 			// Set specific version name for enhanced variant
-			versionName = "0.0.8"
+			versionName = "0.0.9"
 
 			// Set app name for the enhanced version
 			resValue("string", "app_name_release", "DUNE")
@@ -109,11 +109,10 @@ android {
 		val variant = this
 		val variantName = variant.name
 		val versionName = variant.versionName
-		
 		variant.outputs.all {
 			val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
 			if (variantName == "enhanced") {
-				output.outputFileName = "Dune.androidtv-0.0.8.apk"
+				output.outputFileName = "Dune.androidtv-0.0.9.apk"
 			} else {
 				output.outputFileName = "Dune.androidtv-${versionName}.apk"
 			}
@@ -143,9 +142,9 @@ tasks.register("buildEnhanced") {
 	doLast {
 		println("\nBuilding Enhanced version with:")
 		println("Package ID: Dune.enhanced.tv")
-		println("Version: 0.0.8")
+		println("Version: 0.0.9")
 		println("App Name: DUNE")
-		println("Filename: Dune.androidtv-0.0.8.apk")
+		println("Filename: Dune.androidtv-0.0.9.apk")
 		println("The APK will be available in: app/build/outputs/apk/enhanced/release/")
 	}
 }
