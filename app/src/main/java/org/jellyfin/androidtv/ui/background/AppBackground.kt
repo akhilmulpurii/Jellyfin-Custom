@@ -23,13 +23,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.ColorMatrixColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import org.jellyfin.androidtv.R
@@ -112,34 +121,39 @@ fun AppBackground() {
 			typedArray.recycle()
 
 			val fadingColor = getBackdropFadingColor()
-			Box(Modifier.fillMaxSize()) {
-				if (isImageReady) {
-					// Container for top-right positioned backdrop
-					Box(
-						modifier = Modifier
-							.width(600.dp)  // 20% larger (500 * 1.2 = 600)
-							.aspectRatio(16f / 9f)  // Maintain 16:9 aspect ratio
-							.align(Alignment.TopEnd)  // Position in top-right corner
-					) {
-						Image(
-							bitmap = background,
-							contentDescription = null,
-							modifier = Modifier
-								.fillMaxSize()
-								.themedFadingEdges(
-									start = (backdropFadingIntensity * 250).toInt().dp,  // Fade from left
-									bottom = (backdropFadingIntensity * 300).toInt().dp,  // Fade from bottom
-									color = fadingColor
-								),
-							contentScale = ContentScale.Crop,
-							alignment = Alignment.TopEnd,  // Align content to top-right
-							colorFilter = ColorFilter.tint(
-								color = backgroundColor,
-								blendMode = BlendMode.SrcAtop
-							)
+			Box(modifier = Modifier.fillMaxSize()) {
+				Image(
+					bitmap = background,
+					contentDescription = null,
+					modifier = Modifier
+						.fillMaxSize()
+						.themedFadingEdges(
+							start = (backdropFadingIntensity * 1200).toInt().dp,
+							bottom = (backdropFadingIntensity * 300).toInt().dp,
+							color = fadingColor
 						)
-					}
-				}
+						.graphicsLayer {
+							compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.ModulateAlpha
+						},
+					contentScale = ContentScale.Crop,
+					alignment = Alignment.Center,
+					colorFilter = ColorFilter.colorMatrix(
+						ColorMatrix().apply {
+							// Saturation
+							setToSaturation(1.2f)
+
+							// Contrast + Brightness
+							val contrast = 1.2f
+							val brightness = -0.35f // range -1.0 to 1.0
+							this[0, 0] = contrast
+							this[6, 6] = contrast
+							this[12, 12] = contrast
+							this[0, 4] = brightness
+							this[6, 4] = brightness
+							this[12, 4] = brightness
+						}
+					)
+				)
 			}
 		} else {
 			Timber.e("AppBackground - Background is NULL, using AppThemeBackground")
